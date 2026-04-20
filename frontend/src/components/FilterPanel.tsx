@@ -324,7 +324,6 @@ export function FilterPanel() {
                 options={sortedZones}
                 selected={filters.locations}
                 onToggle={(v) => toggleInArray("locations", v)}
-                scrollable
               />
             </Section>
           </div>

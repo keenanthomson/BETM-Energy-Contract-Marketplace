@@ -1,16 +1,16 @@
+> [!NOTE]
+> This app is for testing purposes only.
+
 # Energy Contract Marketplace
 
-A full-stack take-home project: browse ~1,000 energy contracts with rich
-client-side filtering, add/remove from a shared portfolio, and view live
-aggregate metrics.
+Browse ~1,000 energy contracts with rich client-side filtering, add/remove from a shared portfolio, and view live aggregate metrics.
 
 ## Live Demo
 
-- Frontend: _https://betm.vercel.app_ (added once deployed)
-- Backend API + docs: _https://betm-backend.up.railway.app/docs_
+- Frontend: https://betm-energy-contract-marketplace.vercel.app
+- Backend API + docs: https://betm-energy-contract-marketplace-production.up.railway.app/docs
 
-Deployment runs on free tiers — the backend may cold-start for ~10–15s
-after idle.
+Deployment runs on free tiers — the backend may cold-start for ~10–15s after idle.
 
 ## Tech Stack
 
@@ -87,15 +87,15 @@ bunx playwright test --ui          # interactive browser mode
 
 ## API Overview
 
-| Method | Path                      | Notes                                             |
-| ------ | ------------------------- | ------------------------------------------------- |
-| GET    | `/contracts`              | List; supports filter query params (see below)    |
-| GET    | `/contracts/{id}`         | Single contract (404 if missing)                  |
-| PUT    | `/contracts/{id}`         | Update status (422 on invalid enum, 404 on miss)  |
-| GET    | `/portfolio`              | Items + computed metrics                          |
-| POST   | `/portfolio/{contract_id}`| Add to portfolio (404 / 409 duplicate)            |
-| DELETE | `/portfolio/{contract_id}`| Remove from portfolio                             |
-| GET    | `/meta/enums`             | All valid `EnergyType`/`ContractStatus`/`GridZone`|
+| Method | Path                       | Notes                                              |
+| ------ | -------------------------- | -------------------------------------------------- |
+| GET    | `/contracts`               | List; supports filter query params (see below)     |
+| GET    | `/contracts/{id}`          | Single contract (404 if missing)                   |
+| PUT    | `/contracts/{id}`          | Update status (422 on invalid enum, 404 on miss)   |
+| GET    | `/portfolio`               | Items + computed metrics                           |
+| POST   | `/portfolio/{contract_id}` | Add to portfolio (404 / 409 duplicate)             |
+| DELETE | `/portfolio/{contract_id}` | Remove from portfolio                              |
+| GET    | `/meta/enums`              | All valid `EnergyType`/`ContractStatus`/`GridZone` |
 
 **`GET /contracts` filter params:** `energy_type`, `min_price`, `max_price`,
 `min_quantity`, `max_quantity`, `location`, `status`,
