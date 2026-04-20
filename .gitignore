@@ -10,6 +10,10 @@ dist/
 # uv
 .python-version
 
+# Local SQLite dev DB
+*.db
+*.db-journal
+
 # Frontend
 frontend/node_modules/
 frontend/dist/
