@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { FilterIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { EnergyBadge } from "@/components/EnergyBadge";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useEnums } from "@/hooks/useEnums";
 import { useFilteredContracts } from "@/hooks/useFilteredContracts";
 import { useFilterStore } from "@/store/useFilterStore";
@@ -78,6 +81,11 @@ function CheckboxGroup({
   );
 }
 
+// Decouple the <input> DOM value from the store so typing stays responsive
+// on 1k-row datasets (the filter pipeline + re-render only fires every
+// DEBOUNCE_MS, not on every keystroke).
+const DEBOUNCE_MS = 200;
+
 function NumberInput({
   value,
   onChange,
@@ -95,6 +103,23 @@ function NumberInput({
   min?: number;
   max?: number;
 }) {
+  const [local, setLocal] = useState<string>(value === null ? "" : String(value));
+  const debounced = useDebouncedValue(local, DEBOUNCE_MS);
+
+  // Sync local → store after the user pauses typing.
+  useEffect(() => {
+    const parsed = debounced === "" ? null : parseFloat(debounced);
+    if (parsed !== value) onChange(parsed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debounced]);
+
+  // Sync store → local when filters reset externally.
+  useEffect(() => {
+    const asString = value === null ? "" : String(value);
+    if (asString !== local) setLocal(asString);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
   return (
     <div className="relative flex items-center">
       {prefix && (
@@ -104,13 +129,11 @@ function NumberInput({
       )}
       <Input
         type="number"
-        value={value ?? ""}
+        value={local}
         placeholder={placeholder}
         min={min}
         max={max}
-        onChange={(e) =>
-          onChange(e.target.value === "" ? null : parseFloat(e.target.value))
-        }
+        onChange={(e) => setLocal(e.target.value)}
         className={`${prefix ? "pl-6" : ""} ${suffix ? "pr-10" : ""}`}
       />
       {suffix && (
@@ -158,6 +181,8 @@ export function FilterPanel() {
     (value: ContractFilters[K]) =>
       setFilter(key, value);
 
+  const sortedZones = [...(enums?.grid_zones ?? [])].sort();
+
   return (
     <Sheet>
       <SheetTrigger
@@ -166,7 +191,7 @@ export function FilterPanel() {
             <FilterIcon />
             Filters
             {activeCount > 0 && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge variant="default" className="ml-1">
                 {activeCount}
               </Badge>
             )}
@@ -181,11 +206,17 @@ export function FilterPanel() {
         <div className="flex-1 overflow-y-auto p-4">
           <div className="flex flex-col gap-5">
             <Section title="Energy Type">
-              <CheckboxGroup
-                options={enums?.energy_types ?? []}
-                selected={filters.energy_types}
-                onToggle={(v) => toggleInArray("energy_types", v)}
-              />
+              <div className="flex flex-wrap gap-1.5">
+                {(enums?.energy_types ?? []).map((type) => (
+                  <EnergyBadge
+                    key={type}
+                    type={type}
+                    selected={filters.energy_types.includes(type)}
+                    interactive
+                    onClick={() => toggleInArray("energy_types", type)}
+                  />
+                ))}
+              </div>
             </Section>
 
             <Separator />
@@ -290,7 +321,7 @@ export function FilterPanel() {
 
             <Section title="Location">
               <CheckboxGroup
-                options={enums?.grid_zones ?? []}
+                options={sortedZones}
                 selected={filters.locations}
                 onToggle={(v) => toggleInArray("locations", v)}
                 scrollable

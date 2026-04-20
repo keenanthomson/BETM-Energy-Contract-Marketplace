@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ContractTable } from "@/components/ContractTable";
-import { FilterPanel } from "@/components/FilterPanel";
 import { PortfolioPanel } from "@/components/PortfolioPanel";
 import { usePortfolio } from "@/hooks/usePortfolio";
 
@@ -14,39 +13,31 @@ export function Layout() {
   const portfolioCount = portfolio?.metrics.total_contracts ?? 0;
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
+    // h-dvh (dynamic viewport height) accounts for mobile browser chrome
+    // (address bar) so the fixed tab bar always shows above the nav footer.
+    <div className="flex h-dvh flex-col bg-background text-foreground">
       <header className="flex items-center justify-between border-b px-4 py-2.5">
         <h1 className="font-heading text-lg font-semibold">
           Energy Contract Marketplace
         </h1>
-        <div className="hidden md:block">
-          <FilterPanel />
-        </div>
       </header>
 
-      {/* Desktop: split panels */}
-      <div className="hidden md:flex flex-1 overflow-hidden">
-        <main className="flex flex-1 flex-col overflow-hidden">
+      {/* Desktop: split panels (table + right portfolio panel) */}
+      <div className="hidden md:flex flex-1 min-h-0 overflow-hidden">
+        <main className="flex flex-1 min-w-0 flex-col overflow-hidden">
           <ContractTable />
         </main>
         <PortfolioPanel />
       </div>
 
       {/* Mobile: single-tab view */}
-      <div className="flex md:hidden flex-1 flex-col overflow-hidden">
-        {tab === "contracts" && (
-          <>
-            <div className="flex items-center justify-between border-b px-4 py-2">
-              <FilterPanel />
-            </div>
-            <ContractTable />
-          </>
-        )}
+      <div className="flex md:hidden flex-1 min-h-0 flex-col overflow-hidden">
+        {tab === "contracts" && <ContractTable />}
         {tab === "portfolio" && <PortfolioPanel />}
       </div>
 
-      {/* Mobile tab bar */}
-      <nav className="flex md:hidden border-t bg-background">
+      {/* Mobile tab bar — sticky to viewport bottom via h-dvh on root */}
+      <nav className="flex md:hidden shrink-0 border-t bg-background">
         <Button
           variant={tab === "contracts" ? "secondary" : "ghost"}
           className="flex-1 rounded-none"

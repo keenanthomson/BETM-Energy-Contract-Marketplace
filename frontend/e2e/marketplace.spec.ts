@@ -34,7 +34,7 @@ test("filters by energy type and reduces the row count", async ({ page }) => {
   await page.getByRole("button", { name: /filters/i }).first().click();
   await page
     .getByRole("dialog")
-    .getByRole("checkbox", { name: "Solar" })
+    .getByRole("button", { name: "Solar" })
     .click();
 
   // Sheet footer shows the same filtered count (and not the full 1000)
@@ -62,10 +62,10 @@ test("filter badge on trigger reflects active filter count", async ({ page }) =>
   await filtersBtn.click();
   const dialog = page.getByRole("dialog");
   // Activate two DIFFERENT filter groups — badge counts groups, not values
-  const solar = dialog.getByRole("checkbox", { name: "Solar" });
+  const solar = dialog.getByRole("button", { name: "Solar" });
   const available = dialog.getByRole("checkbox", { name: "Available" });
   await solar.click();
-  await expect(solar).toHaveAttribute("aria-checked", "true");
+  await expect(solar).toHaveAttribute("aria-pressed", "true");
   await available.click();
   await expect(available).toHaveAttribute("aria-checked", "true");
 

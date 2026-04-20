@@ -20,7 +20,7 @@ export const useFilteredContracts = (): {
     const minQty = safeNum(filters.min_quantity);
     const maxQty = safeNum(filters.max_quantity);
 
-    return all.filter((c) => {
+    const filtered = all.filter((c) => {
       if (
         filters.energy_types.length &&
         !filters.energy_types.includes(c.energy_type)
@@ -53,6 +53,12 @@ export const useFilteredContracts = (): {
 
       return true;
     });
+
+    // Default sort: Delivery Start ascending (earliest delivery first).
+    // YYYY-MM-DD strings sort lexicographically in chronological order.
+    return [...filtered].sort((a, b) =>
+      a.delivery_start.localeCompare(b.delivery_start),
+    );
   }, [all, filters]);
 
   return { contracts, total: all.length, count: contracts.length };

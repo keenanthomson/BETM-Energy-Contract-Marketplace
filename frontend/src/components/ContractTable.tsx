@@ -11,6 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { EnergyBadge } from "@/components/EnergyBadge";
+import { FilterPanel } from "@/components/FilterPanel";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ApiError } from "@/api/client";
 import { useFilteredContracts } from "@/hooks/useFilteredContracts";
@@ -18,7 +20,6 @@ import { useContracts } from "@/hooks/useContracts";
 import { useAddToPortfolio, usePortfolio } from "@/hooks/usePortfolio";
 import { useFilterStore } from "@/store/useFilterStore";
 import { formatCurrency, formatDate, formatMwh } from "@/lib/format";
-import { energyColor } from "@/lib/colors";
 
 export function ContractTable() {
   const { isLoading, isError, error } = useContracts();
@@ -33,13 +34,11 @@ export function ContractTable() {
   );
 
   const handleAdd = (contractId: number) => {
-    addMutation.mutate(contractId, {
-      onSuccess: () => toast.success("Added to portfolio"),
-      onError: (err) => {
-        const msg =
-          err instanceof ApiError ? err.message : "Failed to add contract";
-        toast.error(msg);
-      },
+    toast.promise(addMutation.mutateAsync(contractId), {
+      loading: "Adding to portfolio…",
+      success: "Added to portfolio",
+      error: (err) =>
+        err instanceof ApiError ? err.message : "Failed to add contract",
     });
   };
 
@@ -61,11 +60,12 @@ export function ContractTable() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex items-center justify-between border-b px-4 py-2 text-sm text-muted-foreground">
+      <div className="flex items-center justify-between gap-3 border-b px-4 py-2 text-sm text-muted-foreground">
         <span>
           Showing <span className="font-medium text-foreground">{count}</span>{" "}
           of {total} contracts
         </span>
+        <FilterPanel />
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -78,7 +78,7 @@ export function ContractTable() {
           </div>
         ) : (
           <Table>
-            <TableHeader className="sticky top-0 bg-background">
+            <TableHeader className="sticky top-0 z-10 bg-background shadow-[inset_0_-1px_0_var(--border)]">
               <TableRow>
                 <TableHead>Energy Type</TableHead>
                 <TableHead className="text-right">Quantity (MWh)</TableHead>
@@ -94,16 +94,12 @@ export function ContractTable() {
               {contracts.map((c) => {
                 const already = inPortfolio.has(c.id);
                 const available = c.status === "Available";
+                const disabled =
+                  already || !available || addMutation.isPending;
                 return (
                   <TableRow key={c.id}>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="inline-block size-2 rounded-full"
-                          style={{ backgroundColor: energyColor(c.energy_type) }}
-                        />
-                        {c.energy_type}
-                      </div>
+                      <EnergyBadge type={c.energy_type} />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMwh(c.quantity_mwh)}
@@ -125,8 +121,13 @@ export function ContractTable() {
                       <Button
                         size="sm"
                         variant={already ? "outline" : "default"}
-                        disabled={already || !available || addMutation.isPending}
+                        disabled={disabled}
                         onClick={() => handleAdd(c.id)}
+                        className={
+                          disabled
+                            ? "disabled:pointer-events-auto disabled:cursor-not-allowed"
+                            : "cursor-pointer hover:bg-primary/85"
+                        }
                       >
                         {already ? (
                           "In Portfolio"

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { EnergyBadge } from "@/components/EnergyBadge";
 import { PortfolioSummary } from "@/components/PortfolioSummary";
 import { StatusBadge } from "@/components/StatusBadge";
 import { usePortfolio, useRemoveFromPortfolio } from "@/hooks/usePortfolio";
@@ -16,18 +17,27 @@ export function PortfolioPanel() {
   const remove = useRemoveFromPortfolio();
 
   const handleRemove = (contractId: number) => {
-    remove.mutate(contractId, {
-      onError: (err) => {
-        const msg =
-          err instanceof ApiError ? err.message : "Failed to remove contract";
-        toast.error(msg);
-      },
+    toast.promise(remove.mutateAsync(contractId), {
+      loading: "Removing from portfolio…",
+      success: "Removed from portfolio",
+      error: (err) =>
+        err instanceof ApiError ? err.message : "Failed to remove contract",
     });
   };
 
   if (collapsed) {
+    const m = data?.metrics;
+    const summaryParts: string[] = ["Portfolio"];
+    if (m) {
+      summaryParts.push(`${m.total_contracts} Contracts`);
+      summaryParts.push(`Capacity ${formatMwh(m.total_capacity_mwh)} MWh`);
+      summaryParts.push(`Total Cost ${formatCurrency(m.total_cost)}`);
+      summaryParts.push(`Avg ${formatCurrency(m.weighted_avg_price)}/MWh`);
+    }
+    const summary = summaryParts.join(" · ");
+
     return (
-      <aside className="hidden md:flex w-12 shrink-0 flex-col items-center border-l bg-background py-3">
+      <aside className="hidden md:flex w-12 shrink-0 flex-col items-center gap-2 border-l bg-background py-3">
         <Button
           variant="ghost"
           size="icon"
@@ -36,9 +46,13 @@ export function PortfolioPanel() {
         >
           <ChevronLeftIcon />
         </Button>
-        <div className="mt-4 rotate-180 [writing-mode:vertical-rl] text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Portfolio
-          {data ? ` · ${data.metrics.total_contracts}` : ""}
+        <div className="flex flex-1 min-h-0 items-start justify-center overflow-hidden">
+          <span
+            className="whitespace-nowrap overflow-hidden text-ellipsis text-xs font-medium text-muted-foreground"
+            style={{ writingMode: "vertical-rl" }}
+          >
+            {summary}
+          </span>
         </div>
       </aside>
     );
@@ -91,7 +105,7 @@ export function PortfolioPanel() {
                     >
                       <div className="flex flex-col gap-1 text-sm">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{c.energy_type}</span>
+                          <EnergyBadge type={c.energy_type} />
                           <StatusBadge status={c.status} />
                         </div>
                         <div className="text-xs text-muted-foreground">

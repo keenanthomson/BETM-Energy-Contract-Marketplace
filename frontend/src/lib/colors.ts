@@ -3,10 +3,12 @@
  * portfolio breakdown bar chart, and filter panel (status dot indicators).
  */
 
+// Keep energy and status palettes disjoint — Pending (amber) previously matched
+// Solar exactly, so Solar is moved to yellow and Natural Gas to a deeper brick.
 export const ENERGY_COLORS: Record<string, string> = {
-  Solar: "#f59e0b", // amber
+  Solar: "#eab308", // yellow
   Wind: "#0ea5e9", // sky
-  "Natural Gas": "#f97316", // orange
+  "Natural Gas": "#b45309", // dark amber / brick
   Hydro: "#0284c7", // blue
   Nuclear: "#8b5cf6", // violet
 };
