@@ -1,5 +1,31 @@
 # Design Decisions
 
+## Frontend Package Manager: Bun
+
+**Decision:** Use Bun instead of npm/pnpm/yarn.
+
+**Justifications:**
+- Significantly faster installs and script execution than npm/yarn
+- Bun 1.0 (Sept 2023) is production-stable; well-supported by our full frontend stack (Vite, React, shadcn, React Query, Zustand)
+- Consistent narrative with uv on the backend — both are "same category, better DX" choices
+- Signals active ecosystem awareness without meaningful stability risk for this use case
+- Will be noted explicitly in README with rationale
+
+---
+
+## Python Package Manager: uv
+
+**Decision:** Use `uv` instead of `pip` + `venv`.
+
+**Justifications:**
+- 10-100x faster installs than pip
+- Replaces `pip`, `venv`, and `pip-tools` in a single tool (`uv sync`, `uv add`, `uv run`)
+- Generates `uv.lock` lockfile for reproducible installs across machines
+- Uses `pyproject.toml` (modern Python packaging standard) instead of `requirements.txt`
+- `uv run <cmd>` executes within the managed venv without manual activation
+
+---
+
 ## Database: PostgreSQL + SQLAlchemy ORM
 
 **Decision:** Use PostgreSQL as the primary database, accessed via SQLAlchemy ORM.
@@ -43,6 +69,57 @@
 - Zustand manages client-only state (active filters, UI toggles) with surgical re-renders — only components subscribed to changed state re-render
 - Redux is overkill for this scope; MobX introduces unnecessary complexity; Context causes broad re-renders on frequent filter updates
 - Both libraries are lightweight, widely recognized, and easy to reason about in a code review
+
+## Date Handling: Date-Only, No Timezone Normalization
+
+**Decision:** Delivery dates are stored and transmitted as date-only values (`YYYY-MM-DD`) with no time component and no timezone.
+
+**Justifications:**
+- Contracts in this app are modeled at day granularity (delivery start/end date) — no sub-daily precision needed
+- Date-only sidesteps timezone complexity entirely; timezone normalization is only critical for hourly/sub-hourly contracts (e.g. day-ahead power at peak hours), which is out of scope
+- In real US energy markets, timezone convention varies by grid (ERCOT=CT, PJM/NYISO=ET, CAISO=PT); most platforms normalize to ET or UTC — acknowledged in README as a known simplification
+- SQLAlchemy `Date` column + Python `date` type + Pydantic `date` field enforce date-only at every layer
+- Frontend displays raw `YYYY-MM-DD` string or splits manually — avoids `new Date()` UTC-midnight timezone shift bug
+
+---
+
+## Numeric Precision: `Decimal` / `NUMERIC` for Price and Quantity
+
+**Decision:** Use `Decimal` (Python) / `NUMERIC` (PostgreSQL) for `price_per_mwh` and `quantity_mwh` instead of `float`.
+
+**Justifications:**
+- Floats use binary floating-point representation which cannot precisely represent many decimal values (e.g. `0.1 + 0.2 = 0.28999...`) — unacceptable for financial data
+- `Numeric(10, 2)` for price (2 decimal places, e.g. `$45.67`), `Numeric(12, 3)` for quantity (3 decimal places, e.g. `124.750 MWh`)
+- PostgreSQL `NUMERIC` stores exact values with no rounding error
+- Pydantic v2 serializes `Decimal` as a string in JSON to preserve precision — frontend parses with `parseFloat()` for calculations and formats with `toLocaleString()` for display
+
+---
+
+## Database Indexes on Contract Columns
+
+**Decision:** Add `index=True` on all filterable `Contract` columns: `energy_type`, `status`, `location`, `price_per_mwh`, `quantity_mwh`, `delivery_start`, `delivery_end`.
+
+**Justifications:**
+- B-tree indexes reduce filter queries from O(n) sequential scan to O(log n) — critical at scale
+- Our workload is overwhelmingly read-heavy (traders browsing/filtering); write cost (slightly slower INSERTs, small disk overhead) is negligible given infrequent writes
+- Low-cardinality columns (energy type, status, location) benefit from indexes on equality filters
+- Numeric and date columns benefit on range queries (`WHERE price BETWEEN x AND y`)
+- Zero practical impact at 1,000 records (Postgres uses sequential scans at small scale), but correct production design and signals DB awareness to reviewer
+
+---
+
+## Enum Synchronization: Runtime API Endpoint (`GET /meta/enums`)
+
+**Decision:** Backend exposes `GET /meta/enums` returning valid values for `EnergyType`, `ContractStatus`, and `GridZone`. Frontend fetches this once on load (React Query `staleTime: Infinity`) and uses it to populate filter options. No hardcoded enum values in frontend code.
+
+**Justifications:**
+- Backend Python enums are the single source of truth — no duplication, no manual sync
+- Runtime correctness is guaranteed: if the backend changes enum values, the frontend always reflects them without a code change or rebuild
+- Compile-time type safety tradeoff is acceptable: if the data contract changes enough to break `string[]`, TypeScript safety would be meaningless anyway
+- Server-side cache: enum values computed once at module load (no DB call, no per-request overhead)
+- Frontend cache: `staleTime: Infinity` — fetched once per session, never refetched unless page reloads
+
+---
 
 ## Frontend Styling: shadcn/ui + Tailwind
 
